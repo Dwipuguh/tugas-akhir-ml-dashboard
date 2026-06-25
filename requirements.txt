@@ -1,6 +1,5 @@
 streamlit
-tensorflow
-keras
+tensorflow-cpu
 scikit-learn
 plotly
 openpyxl
