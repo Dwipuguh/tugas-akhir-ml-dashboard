@@ -1,67 +1,44 @@
+
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║       PROYEK AKHIR - PEMBELAJARAN MESIN                         ║
-║       Heart Disease Prediction: ANN vs SVM                      ║
-║       Institut Teknologi Sepuluh Nopember (ITS)                 ║
-║       Departemen Statistika Bisnis, Fakultas Vokasi             ║
+║       PROYEK AKHIR - PEMBELAJARAN MESIN                          ║
+║       Heart Disease Prediction: ANN vs SVM                       ║
+║       Institut Teknologi Sepuluh Nopember (ITS)                  ║
+║       Departemen Statistika Bisnis, Fakultas Vokasi              ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                  ║
-║  SETUP GOOGLE COLAB (jalankan di sel terpisah):                 ║
-║                                                                  ║
-║  # SEL 1 — Instalasi library                                    ║
-║  !pip install streamlit tensorflow scikit-learn plotly           ║
-║             openpyxl -q                                          ║
-║                                                                  ║
-║  # SEL 2 — Install localtunnel                                  ║
-║  !npm install -g localtunnel -q                                  ║
-║                                                                  ║
-║  # SEL 3 — Upload dataset                                       ║
-║  from google.colab import files                                  ║
-║  files.upload()   # pilih file heart__1_.xlsx                   ║
-║                                                                  ║
-║  # SEL 4 — Tulis file app (gunakan %%writefile)                 ║
-║  %%writefile app.py                                              ║
-║  <paste seluruh kode ini>                                        ║
-║                                                                  ║
-║  # SEL 5 — Jalankan Streamlit + buka tunnel                     ║
-║  !streamlit run app.py &>/content/logs.txt &                    ║
-║  import time; time.sleep(3)                                     ║
-║  !npx localtunnel --port 8501                                   ║
-║                                                                  ║
-╠══════════════════════════════════════════════════════════════════╣
-║                                                                  ║
-║  TABLE OF CONTENTS                                              ║
-║  ──────────────────────────────────────────────────────────     ║
-║  [1]  IMPORT LIBRARY & KONFIGURASI                             ║
-║  [2]  DATA LOADING & PREPROCESSING                             ║
-║       2.1  Load Dataset (xlsx)                                  ║
-║       2.2  Encoding Fitur Kategorikal                           ║
-║       2.3  Train-Test Split & Normalisasi                       ║
-║  [3]  TRAINING MODEL                                           ║
-║       3.1  Artificial Neural Network (ANN)                      ║
-║            Arsitektur : 13 → Dense(64) → Dense(32)             ║
-║                            → Dense(16) → Dense(1)              ║
-║            Regularisasi: BatchNorm · Dropout · L2              ║
-║            Optimizer   : Adam(lr=0.001)                         ║
-║            Loss        : Binary Crossentropy                    ║
-║       3.2  Support Vector Machine (SVM)                        ║
-║            Tuning      : GridSearchCV, 5-fold CV               ║
-║            Parameter   : C=[0.1,1,10,100], kernel=[rbf,linear] ║
-║  [4]  FUNGSI EVALUASI & VISUALISASI                            ║
-║       4.1  Metrik: Accuracy, Precision, Recall, F1, AUC-ROC    ║
-║       4.2  Confusion Matrix                                     ║
-║       4.3  ROC Curve                                            ║
-║  [5]  STREAMLIT DASHBOARD                                      ║
-║       5.1  Konfigurasi Halaman & Tema CSS                       ║
-║       5.2  Sidebar Navigasi                                     ║
-║       5.3  Halaman: Beranda                                     ║
-║       5.4  Halaman: EDA                                         ║
-║       5.5  Halaman: Model ANN                                   ║
-║       5.6  Halaman: Model SVM                                   ║
-║       5.7  Halaman: Perbandingan Model                          ║
-║       5.8  Halaman: Prediksi Pasien                             ║
-║  [6]  MAIN FUNCTION                                            ║
-║  ──────────────────────────────────────────────────────────     ║
+║  TABLE OF CONTENTS                                               ║
+║  ──────────────────────────────────────────────────────────      ║
+║  [1]  IMPORT LIBRARY & KONFIGURASI                               ║
+║  [2]  DATA LOADING & PREPROCESSING                               ║
+║       2.1  Load Dataset (xlsx)                                   ║
+║       2.2  Encoding Fitur Kategorikal                            ║
+║       2.3  Train-Test Split & Normalisasi                        ║
+║  [3]  TRAINING MODEL                                             ║
+║       3.1  Artificial Neural Network (ANN)                       ║
+║            Arsitektur : 13 → Dense(64) → Dense(32)               ║
+║                            → Dense(16) → Dense(1)                ║
+║            Regularisasi: BatchNorm · Dropout · L2                ║
+║            Optimizer   : Adam(lr=0.001)                          ║
+║            Loss        : Binary Crossentropy                     ║
+║       3.2  Support Vector Machine (SVM)                          ║
+║            Tuning      : GridSearchCV, 5-fold CV                 ║
+║            Parameter   : C=[0.1,1,10,100], kernel=[rbf,linear]   ║
+║  [4]  FUNGSI EVALUASI & VISUALISASI                              ║
+║       4.1  Metrik: Accuracy, Precision, Recall, F1, AUC-ROC      ║
+║       4.2  Confusion Matrix                                      ║
+║       4.3  ROC Curve                                             ║
+║  [5]  STREAMLIT DASHBOARD                                        ║
+║       5.1  Konfigurasi Halaman & Tema CSS                        ║
+║       5.2  Sidebar Navigasi                                      ║
+║       5.3  Halaman: Beranda                                      ║
+║       5.4  Halaman: EDA                                          ║
+║       5.5  Halaman: Model ANN                                    ║
+║       5.6  Halaman: Model SVM                                    ║
+║       5.7  Halaman: Perbandingan Model                           ║
+║       5.8  Halaman: Prediksi Pasien                              ║
+║  [6]  MAIN FUNCTION                                              ║
+║  ──────────────────────────────────────────────────────────      ║ 
 ╚══════════════════════════════════════════════════════════════════╝
 """
 
@@ -212,7 +189,13 @@ def load_data() -> pd.DataFrame | None:
 def preprocess(_df: pd.DataFrame):
     """
     2.2  Encoding fitur kategorikal (sex: male→1, female→0)
-    2.3  Train-Test Split 80:20 (stratified) + StandardScaler
+    2.3  Split 3 arah: Train 70% / Val 15% / Test 15% (stratified)
+         + StandardScaler (fit HANYA pada train)
+
+    FIX: drop_duplicates() sebelum split untuk menghilangkan
+    data leakage akibat 697 baris duplikat pada dataset raw.
+    FIX: Validation set dipisah dari test set agar EarlyStopping
+    ANN tidak mengintip data test (information leakage).
     """
     df = _df.copy()
 
@@ -222,20 +205,34 @@ def preprocess(_df: pd.DataFrame):
 
     df.dropna(inplace=True)
 
+    # ── FIX #1: Hapus baris duplikat sebelum split ──────────
+    # Dataset raw: 999 baris, hanya 302 unik (697 duplikat).
+    # Tanpa ini, 73.5% data test bocor ke train → Recall = 1.0
+    df.drop_duplicates(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
     X = df.drop("target", axis=1)
     y = df["target"]
 
-    # Split 80 : 20 dengan stratifikasi
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    # ── FIX #2: Split 3 arah (Train / Validation / Test) ────
+    # Tahap 1: pisahkan test (15%)
+    X_temp, X_test, y_temp, y_test = train_test_split(
+        X, y, test_size=0.15, random_state=42, stratify=y
+    )
+    # Tahap 2: dari sisa, pisahkan val (≈15% total ≈ 17.6% dari sisa)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_temp, y_temp, test_size=0.176, random_state=42, stratify=y_temp
     )
 
-    # Normalisasi: fit pada train, transform pada keduanya
+    # Normalisasi: fit HANYA pada train, transform val & test
     scaler = StandardScaler()
     X_train_sc = scaler.fit_transform(X_train)
+    X_val_sc   = scaler.transform(X_val)
     X_test_sc  = scaler.transform(X_test)
 
-    return X_train, X_test, y_train, y_test, X_train_sc, X_test_sc, scaler
+    return (X_train, X_val, X_test,
+            y_train, y_val, y_test,
+            X_train_sc, X_val_sc, X_test_sc, scaler)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -284,8 +281,13 @@ def _build_ann(n_features: int = 13):
     return model
 
 
-def train_ann(X_train_sc, y_train, X_test_sc, y_test):
-    """Training ANN — hasil disimpan di session_state agar tidak diulang."""
+def train_ann(X_train_sc, y_train, X_val_sc, y_val):
+    """
+    Training ANN.
+    FIX: Gunakan X_val_sc / y_val untuk EarlyStopping,
+    bukan X_test_sc / y_test, agar test set benar-benar
+    tersimpan sebagai data holdout yang belum pernah dilihat model.
+    """
     model = _build_ann(n_features=X_train_sc.shape[1])
 
     cb_list = [
@@ -301,8 +303,8 @@ def train_ann(X_train_sc, y_train, X_test_sc, y_test):
 
     history = model.fit(
         X_train_sc, y_train,
-        validation_data=(X_test_sc, y_test),
-        epochs=200, batch_size=32,
+        validation_data=(X_val_sc, y_val),   # ← val set, bukan test set
+        epochs=200, batch_size=16,            # batch lebih kecil (dataset kecil post-dedup)
         callbacks=cb_list, verbose=0,
     )
     return model, history.history
@@ -1156,16 +1158,16 @@ def main():
         st.stop()
 
     # ── Preprocessing ──
-    (X_train, X_test,
-     y_train, y_test,
-     X_train_sc, X_test_sc, scaler) = preprocess(df)
+    (X_train, X_val, X_test,
+     y_train, y_val, y_test,
+     X_train_sc, X_val_sc, X_test_sc, scaler) = preprocess(df)
 
     # ── Training model (caching via session_state) ──
     if "models_ready" not in st.session_state:
         with st.spinner("⏳ Melatih Model ANN & SVM… harap tunggu sebentar…"):
-            # ANN
+            # ANN — gunakan val set untuk EarlyStopping
             ann_model, ann_history = train_ann(X_train_sc, y_train,
-                                                X_test_sc, y_test)
+                                                X_val_sc, y_val)
             # SVM
             svm_model, best_params, cv_score = train_svm(X_train_sc, y_train)
 
@@ -1200,3 +1202,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
