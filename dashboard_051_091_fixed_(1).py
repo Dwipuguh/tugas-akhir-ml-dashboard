@@ -1,47 +1,69 @@
-
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║       PROYEK AKHIR - PEMBELAJARAN MESIN                          ║
-║       Heart Disease Prediction: ANN vs SVM                       ║
-║       Departemen Statistika Bisnis, Fakultas Vokasi              ║
-║       Institut Teknologi Sepuluh Nopember (ITS)                  ║
+║       PROYEK AKHIR - PEMBELAJARAN MESIN                         ║
+║       Heart Disease Prediction: ANN vs SVM                      ║
+║       Institut Teknologi Sepuluh Nopember (ITS)                 ║
+║       Departemen Statistika Bisnis, Fakultas Vokasi             ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                  ║
-║  TABLE OF CONTENTS                                               ║
-║  ──────────────────────────────────────────────────────────      ║
-║  [1]  IMPORT LIBRARY & KONFIGURASI                               ║
-║  [2]  DATA LOADING & PREPROCESSING                               ║
-║       2.1  Load Dataset (xlsx)                                   ║
-║       2.2  Encoding Fitur Kategorikal                            ║
-║       2.3  Train-Test Split & Normalisasi                        ║
-║  [3]  TRAINING MODEL                                             ║
-║       3.1  Artificial Neural Network (ANN)                       ║
-║            Arsitektur : 13 → Dense(64) → Dense(32)               ║
-║                            → Dense(16) → Dense(1)                ║
-║            Regularisasi: BatchNorm · Dropout · L2                ║
-║            Optimizer   : Adam(lr=0.001)                          ║
-║            Loss        : Binary Crossentropy                     ║
-║       3.2  Support Vector Machine (SVM)                          ║
-║            Tuning      : GridSearchCV, 5-fold CV                 ║
-║            Parameter   : C=[0.1,1,10,100], kernel=[rbf,linear]   ║
-║  [4]  FUNGSI EVALUASI & VISUALISASI                              ║
-║       4.1  Metrik: Accuracy, Precision, Recall, F1, AUC-ROC      ║
-║       4.2  Confusion Matrix                                      ║
-║       4.3  ROC Curve                                             ║
-║  [5]  STREAMLIT DASHBOARD                                        ║
-║       5.1  Konfigurasi Halaman & Tema CSS                        ║
-║       5.2  Sidebar Navigasi                                      ║
-║       5.3  Halaman: Beranda                                      ║
-║       5.4  Halaman: EDA                                          ║
-║       5.5  Halaman: Model ANN                                    ║
-║       5.6  Halaman: Model SVM                                    ║
-║       5.7  Halaman: Perbandingan Model                           ║
-║       5.8  Halaman: Prediksi Pasien                              ║
-║  [6]  MAIN FUNCTION                                              ║
-║  ──────────────────────────────────────────────────────────      ║
+║  SETUP GOOGLE COLAB (jalankan di sel terpisah):                 ║
+║                                                                  ║
+║  # SEL 1 — Instalasi library                                    ║
+║  !pip install streamlit tensorflow scikit-learn plotly           ║
+║             openpyxl -q                                          ║
+║                                                                  ║
+║  # SEL 2 — Install localtunnel                                  ║
+║  !npm install -g localtunnel -q                                  ║
+║                                                                  ║
+║  # SEL 3 — Upload dataset                                       ║
+║  from google.colab import files                                  ║
+║  files.upload()   # pilih file heart__1_.xlsx                   ║
+║                                                                  ║
+║  # SEL 4 — Tulis file app (gunakan %%writefile)                 ║
+║  %%writefile app.py                                              ║
+║  <paste seluruh kode ini>                                        ║
+║                                                                  ║
+║  # SEL 5 — Jalankan Streamlit + buka tunnel                     ║
+║  !streamlit run app.py &>/content/logs.txt &                    ║
+║  import time; time.sleep(3)                                     ║
+║  !npx localtunnel --port 8501                                   ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║  TABLE OF CONTENTS                                              ║
+║  ──────────────────────────────────────────────────────────     ║
+║  [1]  IMPORT LIBRARY & KONFIGURASI                             ║
+║  [2]  DATA LOADING & PREPROCESSING                             ║
+║       2.1  Load Dataset (xlsx)                                  ║
+║       2.2  Encoding Fitur Kategorikal                           ║
+║       2.3  Train-Test Split & Normalisasi                       ║
+║  [3]  TRAINING MODEL                                           ║
+║       3.1  Artificial Neural Network (ANN)                      ║
+║            Arsitektur : 13 → Dense(64) → Dense(32)             ║
+║                            → Dense(16) → Dense(1)              ║
+║            Regularisasi: BatchNorm · Dropout · L2              ║
+║            Optimizer   : Adam(lr=0.001)                         ║
+║            Loss        : Binary Crossentropy                    ║
+║       3.2  Support Vector Machine (SVM)                        ║
+║            Tuning      : GridSearchCV, 5-fold CV               ║
+║            Parameter   : C=[0.1,1,10,100], kernel=[rbf,linear] ║
+║  [4]  FUNGSI EVALUASI & VISUALISASI                            ║
+║       4.1  Metrik: Accuracy, Precision, Recall, F1, AUC-ROC    ║
+║       4.2  Confusion Matrix                                     ║
+║       4.3  ROC Curve                                            ║
+║  [5]  STREAMLIT DASHBOARD                                      ║
+║       5.1  Konfigurasi Halaman & Tema CSS                       ║
+║       5.2  Sidebar Navigasi                                     ║
+║       5.3  Halaman: Beranda                                     ║
+║       5.4  Halaman: EDA                                         ║
+║       5.5  Halaman: Model ANN                                   ║
+║       5.6  Halaman: Model SVM                                   ║
+║       5.7  Halaman: Perbandingan Model                          ║
+║       5.8  Halaman: Prediksi Pasien                             ║
+║  [6]  MAIN FUNCTION                                            ║
+║  ──────────────────────────────────────────────────────────     ║
 ╚══════════════════════════════════════════════════════════════════╝
 """
-
 
 # ══════════════════════════════════════════════════════════════════
 # [1]  IMPORT LIBRARY & KONFIGURASI
@@ -168,7 +190,7 @@ def load_data() -> pd.DataFrame | None:
     """Cari dan baca file dataset xlsx dari beberapa lokasi umum di Colab."""
     candidates = [
         "heart__1_.xlsx",
-        "heart (1).xlsx",
+        "heart.xlsx",
         "/content/heart__1_.xlsx",
         "/content/heart.xlsx",
         "/content/drive/MyDrive/heart__1_.xlsx",
@@ -225,35 +247,30 @@ def preprocess(_df: pd.DataFrame):
 # ─────────────────────────────────────────────────────────────
 def _build_ann(n_features: int = 13):
     """
-    Arsitektur ANN (diperbaiki untuk dataset kecil ~242 sampel train):
-        Input(13) → Dense(32,ReLU) + BN + Dropout(0.15) [L2 kecil]
-                  → Dense(16,ReLU) + BN + Dropout(0.10) [L2 kecil]
-                  → Dense(8, ReLU)
+    Arsitektur ANN:
+        Input(13) → Dense(64,ReLU) + BN + Dropout(0.3) [L2]
+                  → Dense(32,ReLU) + BN + Dropout(0.2) [L2]
+                  → Dense(16,ReLU)
                   → Dense(1, Sigmoid)
-
-    Perbaikan: regularisasi dikurangi agar model tidak collapsed ke satu kelas.
-    Dataset UCI Heart hanya 303 baris → regularisasi berat menyebabkan semua
-    prediksi = 1 sehingga accuracy = precision = recall = f1 ≈ nilai yang sama.
     """
     tf.random.set_seed(42)
-    np.random.seed(42)
     model = keras.Sequential([
         layers.Input(shape=(n_features,), name="input"),
 
-        # Hidden Layer 1 — dikurangi dari 64→32, Dropout 0.3→0.15, L2 0.001→0.0001
-        layers.Dense(32, activation="relu",
-                     kernel_regularizer=regularizers.l2(0.0001), name="dense_1"),
+        # Hidden Layer 1
+        layers.Dense(64, activation="relu",
+                     kernel_regularizer=regularizers.l2(0.001), name="dense_1"),
         layers.BatchNormalization(name="bn_1"),
-        layers.Dropout(0.15, name="dropout_1"),
+        layers.Dropout(0.3, name="dropout_1"),
 
-        # Hidden Layer 2 — dikurangi dari 32→16, Dropout 0.2→0.10, L2 0.001→0.0001
-        layers.Dense(16, activation="relu",
-                     kernel_regularizer=regularizers.l2(0.0001), name="dense_2"),
+        # Hidden Layer 2
+        layers.Dense(32, activation="relu",
+                     kernel_regularizer=regularizers.l2(0.001), name="dense_2"),
         layers.BatchNormalization(name="bn_2"),
-        layers.Dropout(0.10, name="dropout_2"),
+        layers.Dropout(0.2, name="dropout_2"),
 
         # Hidden Layer 3
-        layers.Dense(8, activation="relu", name="dense_3"),
+        layers.Dense(16, activation="relu", name="dense_3"),
 
         # Output
         layers.Dense(1, activation="sigmoid", name="output"),
@@ -273,29 +290,20 @@ def train_ann(X_train_sc, y_train, X_test_sc, y_test):
 
     cb_list = [
         keras_callbacks.EarlyStopping(
-            monitor="val_loss", patience=30,
-            min_delta=1e-4,                  # tambah min_delta agar tidak stop terlalu dini
+            monitor="val_loss", patience=25,
             restore_best_weights=True, verbose=0
         ),
         keras_callbacks.ReduceLROnPlateau(
             monitor="val_loss", factor=0.5,
-            patience=12, min_lr=1e-6, verbose=0
+            patience=10, min_lr=1e-6, verbose=0
         ),
     ]
-
-    # Hitung class_weight untuk menangani imbalance kecil
-    from sklearn.utils.class_weight import compute_class_weight
-    classes = np.unique(y_train)
-    cw_vals = compute_class_weight("balanced", classes=classes, y=y_train)
-    class_weight = dict(zip(classes, cw_vals))
 
     history = model.fit(
         X_train_sc, y_train,
         validation_data=(X_test_sc, y_test),
-        epochs=300, batch_size=16,           # batch_size dikurangi dari 32→16 untuk dataset kecil
-        callbacks=cb_list,
-        class_weight=class_weight,            # tambah class_weight
-        verbose=0,
+        epochs=200, batch_size=32,
+        callbacks=cb_list, verbose=0,
     )
     return model, history.history
 
@@ -305,30 +313,19 @@ def train_ann(X_train_sc, y_train, X_test_sc, y_test):
 # ─────────────────────────────────────────────────────────────
 def train_svm(X_train_sc, y_train):
     """
-    Hyperparameter Tuning dengan GridSearchCV (5-fold Stratified CV):
-        C      : [0.01, 0.1, 1, 10]  ← C=100 dihapus (overfitting pada dataset kecil)
+    Hyperparameter Tuning dengan GridSearchCV (5-fold CV):
+        C      : [0.1, 1, 10, 100]
         kernel : ['rbf', 'linear']
         gamma  : ['scale', 'auto']
-    Scoring  : roc_auc  (lebih robust dari accuracy/f1 untuk binary classification)
-    CV       : StratifiedKFold dengan shuffle=True agar fold lebih representatif
     """
-    from sklearn.model_selection import StratifiedKFold
-
     param_grid = {
-        "C":      [0.01, 0.1, 1, 10],   # C=100 dihapus — terlalu agresif utk 242 train samples
+        "C":      [0.1, 1, 10, 100],
         "kernel": ["rbf", "linear"],
         "gamma":  ["scale", "auto"],
     }
-    # StratifiedKFold eksplisit agar distribusi kelas terjaga di setiap fold
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-    svm = SVC(probability=True, random_state=42)   # class_weight dihapus — biarkan data bicara
-    gs  = GridSearchCV(
-        svm, param_grid,
-        cv=skf,
-        scoring="roc_auc",   # roc_auc lebih stabil dan tidak bias ke salah satu kelas
-        n_jobs=-1, verbose=0,
-    )
+    svm = SVC(probability=True, random_state=42)
+    gs  = GridSearchCV(svm, param_grid, cv=5, scoring="accuracy",
+                        n_jobs=-1, verbose=0)
     gs.fit(X_train_sc, y_train)
 
     return gs.best_estimator_, gs.best_params_, round(gs.best_score_, 4)
@@ -347,13 +344,10 @@ def evaluate_model(y_true, y_pred, y_prob, name: str):
     auc       = round(roc_auc_score(y_true, y_prob), 4)
     metrics   = {
         "Model"    : name,
-        "Accuracy" : round(accuracy_score(y_true, y_pred),                              4),
-        "Precision": round(precision_score(y_true, y_pred, average="binary",
-                                           zero_division=0),                             4),
-        "Recall"   : round(recall_score(y_true, y_pred, average="binary",
-                                        zero_division=0),                                4),
-        "F1-Score" : round(f1_score(y_true, y_pred, average="binary",
-                                    zero_division=0),                                    4),
+        "Accuracy" : round(accuracy_score(y_true, y_pred),            4),
+        "Precision": round(precision_score(y_true, y_pred),           4),
+        "Recall"   : round(recall_score(y_true, y_pred),              4),
+        "F1-Score" : round(f1_score(y_true, y_pred),                  4),
         "AUC-ROC"  : auc,
     }
     return metrics, cm, fpr, tpr, auc
@@ -437,7 +431,7 @@ def render_sidebar() -> str:
         <span style="font-size:3em;">❤️</span>
         <h2 style="color:#4fc3f7; margin:6px 0 2px;">Heart Disease</h2>
         <p style="color:#7a9cc0; font-size:12px; margin:0;">
-            ANN &amp; SVM · Statistika Bisnis FV-ITS
+            ANN &amp; SVM · ITS Statistika Bisnis
         </p>
     </div>
     <hr>
@@ -470,7 +464,7 @@ def page_beranda(df: pd.DataFrame):
     st.markdown(
         "**Analisis Komparatif: Artificial Neural Network (ANN) vs "
         "Support Vector Machine (SVM)**  \n"
-        "Dataset: Heart Disease UCI"
+        "Dataset: Heart Disease UCI  •  ITS Statistika Bisnis, Fakultas Vokasi"
     )
     st.markdown("---")
 
@@ -797,7 +791,7 @@ def page_ann(ann_model, ann_history: dict, X_test_sc, y_test):
     st.subheader("📋 Classification Report")
     rpt = classification_report(y_test, y_pred_ann,
                                   target_names=["Sehat (0)", "Sakit (1)"],
-                                  output_dict=True, zero_division=0)
+                                  output_dict=True)
     st.dataframe(pd.DataFrame(rpt).T.round(4), use_container_width=True)
 
 
@@ -815,7 +809,7 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
     with c1:
         st.markdown("""
 **Grid Parameter yang Dicoba**
-- C      : [0.01, 0.1, 1, 10]
+- C      : [0.1, 1, 10, 100]
 - kernel : [rbf, linear]
 - gamma  : [scale, auto]
         """)
@@ -823,8 +817,8 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
         st.markdown(f"""
 **Strategi Pencarian**
 - Metode  : GridSearchCV
-- CV      : 5-Fold Stratified CV (shuffle)
-- Scoring : AUC-ROC
+- CV      : 5-Fold Cross Validation
+- Scoring : Accuracy
 - CV Score Terbaik : **`{cv_score}`**
         """)
     with c3:
@@ -883,7 +877,7 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
     st.subheader("📋 Classification Report")
     rpt = classification_report(y_test, y_pred_svm,
                                   target_names=["Sehat (0)", "Sakit (1)"],
-                                  output_dict=True, zero_division=0)
+                                  output_dict=True)
     st.dataframe(pd.DataFrame(rpt).T.round(4), use_container_width=True)
 
 
