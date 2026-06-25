@@ -190,7 +190,7 @@ def load_data() -> pd.DataFrame | None:
     """Cari dan baca file dataset xlsx dari beberapa lokasi umum di Colab."""
     candidates = [
         "heart__1_.xlsx",
-        "heart.xlsx",
+        "heart (1).xlsx",
         "/content/heart__1_.xlsx",
         "/content/heart.xlsx",
         "/content/drive/MyDrive/heart__1_.xlsx",
