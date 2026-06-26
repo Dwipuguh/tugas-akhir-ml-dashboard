@@ -468,7 +468,7 @@ def render_sidebar() -> str:
         <span style="font-size:3em;">❤️</span>
         <h2 style="color:#4fc3f7; margin:6px 0 2px;">Heart Disease</h2>
         <p style="color:#7a9cc0; font-size:12px; margin:0;">
-            ANN &amp; SVM · Statistika Bisnis FV-ITS 
+            ANN &amp; SVM · Statistika Bisnis FV-ITS
         </p>
     </div>
     <hr>
@@ -501,7 +501,7 @@ def page_beranda(df: pd.DataFrame):
     st.markdown(
         "**Analisis Komparatif: Artificial Neural Network (ANN) vs "
         "Support Vector Machine (SVM)**  \n"
-        "Dataset: Heart Disease UCI  •  ITS Statistika Bisnis, Fakultas Vokasi"
+        "Dataset: Heart Disease UCI  • Statistika Bisnis Fakultas Vokasi-ITS"
     )
     st.markdown("---")
 
@@ -1059,7 +1059,33 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
         "Masukkan data klinis pasien untuk mendapatkan prediksi real-time "
         "dari kedua model secara bersamaan."
     )
+
+    # ── Catatan penting encoding dataset UCI ─────────────────────
+    st.info(
+        "📌 **Catatan Encoding Dataset UCI Heart Disease:**  \n"
+        "- **Tipe Nyeri Dada `3 — Asymptomatic`**: Dalam dataset UCI, pasien tanpa gejala "
+        "nyeri dada justru berkorelasi *lebih tinggi* dengan penyakit jantung. "
+        "Ini berlawanan dengan intuisi klinis umum.  \n"
+        "- **Jumlah Pembuluh (`ca`)**: Nilai `3` berarti 3 pembuluh utama terdeteksi saat "
+        "fluoroskopi — ini adalah **risk factor kuat** penyakit jantung.  \n"
+        "- **Detak Jantung Maks (`thalach`)**: Nilai < 100 bpm saat uji olahraga "
+        "berada di luar rentang data pelatihan (min ~71, rata-rata ~150 bpm), "
+        "sehingga prediksi bisa tidak akurat.  \n"
+        "- Input yang berada di luar rentang data pelatihan akan **di-*clamp*** "
+        "secara otomatis agar prediksi tetap valid."
+    )
     st.markdown("---")
+
+    # ── Rentang valid data pelatihan (dari distribusi dataset UCI) ──
+    # Digunakan untuk validasi dan clamp input sebelum scaling
+    TRAIN_RANGES = {
+        # fitur      : (min_valid, max_valid)
+        "age"        : (29,  77),
+        "trestbps"   : (94, 200),
+        "chol"       : (126, 564),
+        "thalach"    : (71,  202),
+        "oldpeak"    : (0.0,  6.2),
+    }
 
     c1, c2, c3 = st.columns(3)
 
@@ -1070,11 +1096,12 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
         cp   = st.selectbox(
             "Tipe Nyeri Dada",
             options=[0, 1, 2, 3],
+            index=2,   # default: 2 — Non-Anginal (lebih netral untuk orang sehat)
             format_func=lambda x: {
                 0: "0 — Typical Angina",
                 1: "1 — Atypical Angina",
                 2: "2 — Non-Anginal Pain",
-                3: "3 — Asymptomatic",
+                3: "3 — Asymptomatic ⚠️ (risk factor di dataset UCI)",
             }[x]
         )
         fbs  = st.selectbox("Gula Darah Puasa > 120 mg/dl", [0, 1],
@@ -1082,8 +1109,8 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
 
     with c2:
         st.subheader("🩺 Pemeriksaan Klinis")
-        trestbps = st.slider("Tekanan Darah Istirahat (mm Hg)", 80, 200, 120)
-        chol     = st.slider("Kolesterol Serum (mg/dl)", 100, 600, 240)
+        trestbps = st.slider("Tekanan Darah Istirahat (mm Hg)", 94, 200, 120)
+        chol     = st.slider("Kolesterol Serum (mg/dl)", 126, 564, 220)
         restecg  = st.selectbox(
             "Hasil EKG Istirahat",
             options=[0, 1, 2],
@@ -1093,42 +1120,100 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
                 2: "2 — LV Hypertrophy",
             }[x]
         )
-        thalach  = st.slider("Detak Jantung Maks", 60, 220, 150)
+        thalach  = st.slider("Detak Jantung Maks (bpm)", 71, 202, 155)
 
     with c3:
         st.subheader("🏃 Data Uji Olahraga")
         exang   = st.selectbox("Angina akibat Olahraga", [0, 1],
                                 format_func=lambda x: f"{x} — {'Ya' if x else 'Tidak'}")
-        oldpeak = st.slider("Depresi ST (Oldpeak)", 0.0, 6.2, 1.0, step=0.1)
+        oldpeak = st.slider("Depresi ST (Oldpeak)", 0.0, 6.2, 0.0, step=0.1)
         slope   = st.selectbox(
             "Kemiringan ST Puncak",
             options=[0, 1, 2],
+            index=2,   # default: 2 — Upsloping (lebih baik/sehat)
             format_func=lambda x: {0: "0 — Downsloping", 1: "1 — Flat", 2: "2 — Upsloping"}[x]
         )
-        ca   = st.selectbox("Jumlah Pembuluh Darah Utama (0–3)", [0, 1, 2, 3])
+        ca   = st.selectbox(
+            "Jumlah Pembuluh Darah Utama (0–3)",
+            options=[0, 1, 2, 3],
+            index=0,   # default: 0 — tidak ada pembuluh tersumbat
+            format_func=lambda x: f"{x}{'  ⚠️ Risk factor' if x > 0 else ' — Tidak ada penyumbatan'}"
+        )
         thal = st.selectbox(
             "Thalassemia",
             options=[0, 1, 2],
-            format_func=lambda x: {0: "0 — Normal", 1: "1 — Fixed Defect", 2: "2 — Reversible Defect"}[x]
+            format_func=lambda x: {
+                0: "0 — Normal",
+                1: "1 — Fixed Defect",
+                2: "2 — Reversible Defect",
+            }[x]
         )
+
+    # ── Peringatan risk factor yang dipilih user ─────────────────
+    warnings_list = []
+    if cp == 3:
+        warnings_list.append("**Tipe Nyeri Dada = Asymptomatic (3)**: Dalam dataset UCI, "
+                              "nilai ini berkorelasi tinggi dengan penyakit jantung.")
+    if ca >= 2:
+        warnings_list.append(f"**Pembuluh Darah Utama = {ca}**: Semakin banyak pembuluh "
+                              "yang terlihat di fluoroskopi, semakin tinggi risiko penyakit jantung.")
+    if thalach < 100:
+        warnings_list.append(f"**Detak Jantung Maks = {thalach} bpm**: Nilai ini sangat rendah "
+                              "(di bawah rentang wajar data latih). Input akan di-*clamp* ke 71 bpm.")
+    if chol < 150:
+        warnings_list.append(f"**Kolesterol = {chol} mg/dl**: Nilai ini di bawah rentang "
+                              "data latih (min 126). Prediksi mungkin kurang akurat.")
+    if trestbps < 95:
+        warnings_list.append(f"**Tekanan Darah = {trestbps} mmHg**: Nilai ini sangat rendah "
+                              "(hipotensi berat). Pastikan data sudah benar.")
+
+    if warnings_list:
+        with st.expander("⚠️ Perhatian: Faktor yang mempengaruhi prediksi", expanded=True):
+            for w in warnings_list:
+                st.warning(w)
 
     st.markdown("---")
 
     if st.button("🔍 Prediksi Sekarang", use_container_width=True):
-        sex_val    = 1 if sex == "Male" else 0
-        input_arr  = np.array([[age, sex_val, cp, trestbps, chol, fbs,
-                                 restecg, thalach, exang, oldpeak, slope, ca, thal]])
-        input_sc   = scaler.transform(input_arr)
+        sex_val = 1 if sex == "Male" else 0
 
-        # Prediksi ANN — pakai threshold optimal (bukan 0.5)
+        # ── Clamp nilai ke rentang valid data pelatihan ──────────
+        # Mencegah extrapolation yang menyebabkan prediksi tidak akurat
+        age_c      = int(np.clip(age,      *TRAIN_RANGES["age"]))
+        trestbps_c = int(np.clip(trestbps, *TRAIN_RANGES["trestbps"]))
+        chol_c     = int(np.clip(chol,     *TRAIN_RANGES["chol"]))
+        thalach_c  = int(np.clip(thalach,  *TRAIN_RANGES["thalach"]))
+        oldpeak_c  = float(np.clip(oldpeak, *TRAIN_RANGES["oldpeak"]))
+
+        input_arr = np.array([[age_c, sex_val, cp, trestbps_c, chol_c, fbs,
+                                restecg, thalach_c, exang, oldpeak_c, slope, ca, thal]],
+                              dtype=float)
+        input_sc  = scaler.transform(input_arr)
+
+        # ── Prediksi ANN — threshold optimal (bukan 0.5) ─────────
         prob_ann = float(ann_model.predict(input_sc, verbose=0)[0][0])
         pred_ann = int(prob_ann >= ann_threshold)
 
-        # Prediksi SVM — pakai threshold optimal (bukan 0.5)
+        # ── Prediksi SVM — threshold optimal (bukan 0.5) ─────────
         prob_svm = float(svm_model.predict_proba(input_sc)[0][1])
         pred_svm = int(prob_svm >= svm_threshold)
 
-        st.markdown("---")
+        # ── Tampilkan nilai yang di-clamp jika berbeda ────────────
+        clamped_info = []
+        if age != age_c:
+            clamped_info.append(f"Usia: {age} → {age_c}")
+        if trestbps != trestbps_c:
+            clamped_info.append(f"TD Istirahat: {trestbps} → {trestbps_c}")
+        if chol != chol_c:
+            clamped_info.append(f"Kolesterol: {chol} → {chol_c}")
+        if thalach != thalach_c:
+            clamped_info.append(f"Detak Jantung Maks: {thalach} → {thalach_c}")
+        if clamped_info:
+            st.info(
+                "🔧 **Nilai yang di-*clamp*** ke batas data pelatihan: " +
+                " | ".join(clamped_info)
+            )
+
         st.subheader("📊 Hasil Prediksi")
         c1, c2 = st.columns(2)
 
@@ -1155,7 +1240,7 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
                 st.markdown("**Tingkat Risiko:**")
                 st.progress(float(prob))
 
-        # Ringkasan
+        # ── Ringkasan ─────────────────────────────────────────────
         st.markdown("---")
         st.subheader("📌 Ringkasan")
         avg_prob = (prob_ann + prob_svm) / 2
@@ -1178,6 +1263,30 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
             st.warning("⚠️ Risiko **sedang** — pantau kondisi dan konsultasikan ke dokter.")
         else:
             st.success("✅ Risiko **rendah** — tetap jaga pola hidup sehat.")
+
+        # ── Penjelasan faktor risiko berdasarkan input ────────────
+        if warnings_list:
+            st.markdown("---")
+            st.subheader("🔍 Interpretasi Faktor Risiko Input")
+            st.markdown(
+                "Model memprediksi berdasarkan pola dari data latih. "
+                "Beberapa fitur yang diinput memiliki bobot besar dalam prediksi:"
+            )
+            risk_factors = {
+                "ca > 0"  : (ca > 0,    f"Jumlah pembuluh bermasalah = **{ca}** (semakin tinggi = semakin berisiko)"),
+                "cp == 3" : (cp == 3,   "Tipe nyeri dada **Asymptomatic** berkorelasi tinggi dengan penyakit jantung di dataset UCI"),
+                "exang"   : (exang == 1,"Angina akibat olahraga = **Ya** (tanda iskemia miokard)"),
+                "oldpeak" : (oldpeak > 1.5, f"Depresi ST = **{oldpeak}** > 1.5 (abnormal)"),
+                "slope"   : (slope == 0,"Kemiringan ST **Downsloping** (tanda iskemia berat)"),
+                "thalach" : (thalach_c < 130, f"Detak jantung maks = **{thalach_c} bpm** (rendah — risiko lebih tinggi)"),
+            }
+            has_risk = False
+            for _, (is_risk, desc) in risk_factors.items():
+                if is_risk:
+                    st.warning(f"⚠️ {desc}")
+                    has_risk = True
+            if not has_risk:
+                st.success("✅ Tidak ada faktor risiko dominan yang terdeteksi dari input ini.")
 
         st.caption(
             "⚠️ *Disclaimer: Prediksi ini hanya untuk keperluan akademis dan "
