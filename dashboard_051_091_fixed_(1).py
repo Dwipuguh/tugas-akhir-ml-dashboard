@@ -42,11 +42,10 @@
 ╚══════════════════════════════════════════════════════════════════╝
 """
 
-
 # ══════════════════════════════════════════════════════════════════
 # [1]  IMPORT LIBRARY & KONFIGURASI
 # ══════════════════════════════════════════════════════════════════
- 
+
 import os
 import warnings
 import numpy as np
@@ -55,7 +54,7 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
- 
+
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -64,14 +63,14 @@ from sklearn.metrics import (
     f1_score, roc_auc_score, roc_curve,
     confusion_matrix, classification_report
 )
- 
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, regularizers, callbacks as keras_callbacks
- 
+
 warnings.filterwarnings("ignore")
 tf.get_logger().setLevel("ERROR")
- 
+
 # ─────────────────────────────────────────────────────────────
 # [5.1]  Konfigurasi Halaman & Tema CSS
 # ─────────────────────────────────────────────────────────────
@@ -81,7 +80,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
- 
+
 st.markdown("""
 <style>
 /* ── Sidebar ── */
@@ -90,7 +89,7 @@ st.markdown("""
 }
 [data-testid="stSidebar"] * { color: #c9d6df !important; }
 [data-testid="stSidebar"] hr { border-color: #415a77 !important; }
- 
+
 /* ── Metric Cards ── */
 [data-testid="metric-container"] {
     background: linear-gradient(135deg, #1b263b, #0d1b2a);
@@ -101,13 +100,13 @@ st.markdown("""
 }
 [data-testid="stMetricValue"] { color: #4fc3f7 !important; font-size: 1.6rem !important; }
 [data-testid="stMetricLabel"] { color: #90caf9 !important; }
- 
+
 /* ── Typography ── */
 h1 { color: #e0f7fa !important; }
 h2 { color: #b3e5fc !important; }
 h3 { color: #81d4fa !important; }
 p, li { color: #c9d6df; }
- 
+
 /* ── Buttons ── */
 .stButton > button {
     background: linear-gradient(135deg, #1565c0, #0d47a1);
@@ -120,13 +119,13 @@ p, li { color: #c9d6df; }
     transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(21,101,192,0.4);
 }
- 
+
 /* ── Tabs ── */
 [data-testid="stTabs"] { border-bottom: 1px solid #415a77; }
- 
+
 /* ── Divider ── */
 hr { border-color: #415a77 !important; }
- 
+
 /* ── Prediction result card ── */
 .result-card {
     background: linear-gradient(135deg, #0d1b2a, #1b263b);
@@ -137,12 +136,12 @@ hr { border-color: #415a77 !important; }
 }
 </style>
 """, unsafe_allow_html=True)
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════════
 # [2]  DATA LOADING & PREPROCESSING
 # ══════════════════════════════════════════════════════════════════
- 
+
 # Kamus deskripsi fitur (Bahasa Indonesia)
 FEATURE_DESC = {
     "age":      "Usia (tahun)",
@@ -159,7 +158,7 @@ FEATURE_DESC = {
     "ca":       "Jumlah Pembuluh Darah Utama  (0–3)",
     "thal":     "Thalassemia  (0=Normal, 1=Fixed Defect, 2=Reversible Defect)",
 }
- 
+
 # ─────────────────────────────────────────────────────────────
 # [2.1]  Load Dataset
 # ─────────────────────────────────────────────────────────────
@@ -168,7 +167,7 @@ def load_data() -> pd.DataFrame | None:
     """Cari dan baca file dataset xlsx dari beberapa lokasi umum di Colab."""
     candidates = [
         "heart__1_.xlsx",
-        "heart (1).xlsx",
+        "heart.xlsx",
         "/content/heart__1_.xlsx",
         "/content/heart.xlsx",
         "/content/drive/MyDrive/heart__1_.xlsx",
@@ -181,8 +180,8 @@ def load_data() -> pd.DataFrame | None:
             df.drop(columns=drop_cols, inplace=True)
             return df
     return None
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [2.2 & 2.3]  Encoding, Split, dan Normalisasi
 # ─────────────────────────────────────────────────────────────
@@ -192,29 +191,29 @@ def preprocess(_df: pd.DataFrame):
     2.2  Encoding fitur kategorikal (sex: male→1, female→0)
     2.3  Split 3 arah: Train 70% / Val 15% / Test 15% (stratified)
          + StandardScaler (fit HANYA pada train)
- 
+
     FIX: drop_duplicates() sebelum split untuk menghilangkan
     data leakage akibat 697 baris duplikat pada dataset raw.
     FIX: Validation set dipisah dari test set agar EarlyStopping
     ANN tidak mengintip data test (information leakage).
     """
     df = _df.copy()
- 
+
     # Encoding kolom sex (string → biner)
     if df["sex"].dtype == object:
         df["sex"] = df["sex"].map({"male": 1, "female": 0})
- 
+
     df.dropna(inplace=True)
- 
+
     # ── FIX #1: Hapus baris duplikat sebelum split ──────────
     # Dataset raw: 999 baris, hanya 302 unik (697 duplikat).
     # Tanpa ini, 73.5% data test bocor ke train → Recall = 1.0
     df.drop_duplicates(inplace=True)
     df.reset_index(drop=True, inplace=True)
- 
+
     X = df.drop("target", axis=1)
     y = df["target"]
- 
+
     # ── FIX #2: Split 3 arah (Train / Validation / Test) ────
     # Tahap 1: pisahkan test (15%)
     X_temp, X_test, y_temp, y_test = train_test_split(
@@ -224,22 +223,22 @@ def preprocess(_df: pd.DataFrame):
     X_train, X_val, y_train, y_val = train_test_split(
         X_temp, y_temp, test_size=0.176, random_state=42, stratify=y_temp
     )
- 
+
     # Normalisasi: fit HANYA pada train, transform val & test
     scaler = StandardScaler()
     X_train_sc = scaler.fit_transform(X_train)
     X_val_sc   = scaler.transform(X_val)
     X_test_sc  = scaler.transform(X_test)
- 
+
     return (X_train, X_val, X_test,
             y_train, y_val, y_test,
             X_train_sc, X_val_sc, X_test_sc, scaler)
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════════
 # [3]  TRAINING MODEL
 # ══════════════════════════════════════════════════════════════════
- 
+
 # ─────────────────────────────────────────────────────────────
 # [3.1]  Artificial Neural Network (ANN) — TensorFlow/Keras
 # ─────────────────────────────────────────────────────────────
@@ -250,7 +249,7 @@ def _build_ann(n_features: int = 13):
         → Dense(32, ReLU, L2=0.01) + Dropout(0.4)
         → Dense(16, ReLU, L2=0.01) + Dropout(0.3)
         → Dense(1,  Sigmoid)
- 
+
     Alasan desain:
     - HAPUS BatchNormalization: tidak stabil dengan batch kecil & dataset kecil
     - KURANGI neuron (64→32, 32→16): cegah overfitting pada ≈211 sampel
@@ -259,34 +258,34 @@ def _build_ann(n_features: int = 13):
     """
     tf.random.set_seed(42)
     np.random.seed(42)
- 
+
     model = keras.Sequential([
         layers.Input(shape=(n_features,), name="input"),
- 
+
         # Hidden Layer 1
         layers.Dense(32, activation="relu",
                      kernel_regularizer=regularizers.l2(0.01),
                      kernel_initializer="he_normal", name="dense_1"),
         layers.Dropout(0.4, name="dropout_1"),
- 
+
         # Hidden Layer 2
         layers.Dense(16, activation="relu",
                      kernel_regularizer=regularizers.l2(0.01),
                      kernel_initializer="he_normal", name="dense_2"),
         layers.Dropout(0.3, name="dropout_2"),
- 
+
         # Output
         layers.Dense(1, activation="sigmoid", name="output"),
     ], name="ANN_HeartDisease")
- 
+
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=0.001),
         loss="binary_crossentropy",
         metrics=["accuracy"],
     )
     return model
- 
- 
+
+
 def train_ann(X_train_sc, y_train, X_val_sc, y_val):
     """
     Training ANN dengan:
@@ -294,13 +293,13 @@ def train_ann(X_train_sc, y_train, X_val_sc, y_val):
     - class_weight='balanced' agar model tidak bias ke kelas mayoritas
     """
     from sklearn.utils.class_weight import compute_class_weight
- 
+
     # Hitung bobot kelas otomatis (atasi imbalance ringan 164 vs 138)
     cw = compute_class_weight("balanced", classes=np.unique(y_train), y=y_train)
     class_weight = {0: float(cw[0]), 1: float(cw[1])}
- 
+
     model = _build_ann(n_features=X_train_sc.shape[1])
- 
+
     cb_list = [
         keras_callbacks.EarlyStopping(
             monitor="val_loss", patience=30,
@@ -311,7 +310,7 @@ def train_ann(X_train_sc, y_train, X_val_sc, y_val):
             patience=12, min_lr=1e-6, verbose=0
         ),
     ]
- 
+
     history = model.fit(
         X_train_sc, y_train,
         validation_data=(X_val_sc, y_val),  # val set, bukan test set
@@ -320,8 +319,8 @@ def train_ann(X_train_sc, y_train, X_val_sc, y_val):
         callbacks=cb_list, verbose=0,
     )
     return model, history.history
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [3.2]  Support Vector Machine (SVM) — Scikit-learn
 # ─────────────────────────────────────────────────────────────
@@ -343,14 +342,14 @@ def train_svm(X_train_sc, y_train):
     gs  = GridSearchCV(svm, param_grid, cv=5, scoring="f1",  # scoring f1 lebih adil
                         n_jobs=-1, verbose=0)
     gs.fit(X_train_sc, y_train)
- 
+
     return gs.best_estimator_, gs.best_params_, round(gs.best_score_, 4)
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════════
 # [4]  FUNGSI EVALUASI & VISUALISASI
 # ══════════════════════════════════════════════════════════════════
- 
+
 # ─────────────────────────────────────────────────────────────
 # [4.1]  Threshold Optimal via Youden's J Statistic
 # ─────────────────────────────────────────────────────────────
@@ -359,7 +358,7 @@ def find_optimal_threshold(y_val_true, y_val_prob) -> float:
     Cari threshold optimal menggunakan Youden's J statistic pada validation set:
         J = Sensitivity + Specificity - 1 = TPR - FPR
     Threshold yang memaksimalkan J dipilih sebagai threshold final.
- 
+
     Mengapa tidak pakai 0.5?
     Pada dataset kecil, distribusi probabilitas output model tidak selalu
     terpusat di 0.5. Threshold 0.5 bisa menyebabkan model selalu predict
@@ -369,10 +368,10 @@ def find_optimal_threshold(y_val_true, y_val_prob) -> float:
     youden_j = tpr - fpr
     best_idx  = np.argmax(youden_j)
     optimal   = float(thresholds[best_idx])
-    # Clamp agar tidak ekstrem (0.15 – 0.85)
-    return float(np.clip(optimal, 0.15, 0.85))
- 
- 
+    # Clamp agar tidak ekstrem (0.15 – 0.75)
+    return float(np.clip(optimal, 0.15, 0.75))
+
+
 # ─────────────────────────────────────────────────────────────
 # [4.2]  Hitung Semua Metrik
 # ─────────────────────────────────────────────────────────────
@@ -389,8 +388,8 @@ def evaluate_model(y_true, y_pred, y_prob, name: str):
         "AUC-ROC"  : auc,
     }
     return metrics, cm, fpr, tpr, auc
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [4.2]  Plot Confusion Matrix
 # ─────────────────────────────────────────────────────────────
@@ -416,8 +415,8 @@ def fig_confusion_matrix(cm, title: str, colorscale="Blues"):
         margin=dict(l=20, r=20, t=45, b=20),
     )
     return fig
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [4.3]  Plot ROC Curve
 # ─────────────────────────────────────────────────────────────
@@ -440,13 +439,13 @@ def fig_roc_comparison(fpr_ann, tpr_ann, auc_ann,
         legend=dict(x=0.55, y=0.15),
     )
     return fig
- 
- 
+
+
 # Warna default plotly (dark background)
 PLOT_BG  = "rgba(13,27,42,0.85)"
 PAPER_BG = "rgba(0,0,0,0)"
 FONT_COL = "white"
- 
+
 def _base_layout(**kwargs):
     return dict(
         paper_bgcolor=PAPER_BG,
@@ -454,12 +453,12 @@ def _base_layout(**kwargs):
         font_color=FONT_COL,
         **kwargs,
     )
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════════
 # [5]  STREAMLIT DASHBOARD
 # ══════════════════════════════════════════════════════════════════
- 
+
 # ─────────────────────────────────────────────────────────────
 # [5.2]  Sidebar Navigasi
 # ─────────────────────────────────────────────────────────────
@@ -474,7 +473,7 @@ def render_sidebar() -> str:
     </div>
     <hr>
     """, unsafe_allow_html=True)
- 
+
     menu = st.sidebar.radio("📋 Navigasi", [
         "🏠  Beranda",
         "📊  EDA",
@@ -483,7 +482,7 @@ def render_sidebar() -> str:
         "📈  Perbandingan Model",
         "🔮  Prediksi Pasien",
     ], label_visibility="collapsed")
- 
+
     st.sidebar.markdown("""
     <hr>
     <p style="font-size:11px; color:#5e7a94; text-align:center;">
@@ -492,8 +491,8 @@ def render_sidebar() -> str:
     </p>
     """, unsafe_allow_html=True)
     return menu
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [5.3]  Halaman Beranda
 # ─────────────────────────────────────────────────────────────
@@ -505,7 +504,7 @@ def page_beranda(df: pd.DataFrame):
         "Dataset: Heart Disease UCI  •  ITS Statistika Bisnis, Fakultas Vokasi"
     )
     st.markdown("---")
- 
+
     # KPI row
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Total Sampel",    f"{len(df):,}")
@@ -513,10 +512,10 @@ def page_beranda(df: pd.DataFrame):
     c3.metric("Sakit Jantung",   int(df["target"].sum()))
     c4.metric("Sehat",           int((df["target"] == 0).sum()))
     c5.metric("Rasio Positif",   f"{df['target'].mean()*100:.1f}%")
- 
+
     st.markdown("---")
     col_desc, col_pie = st.columns([1.3, 1])
- 
+
     # Tabel deskripsi fitur
     with col_desc:
         st.subheader("📋 Deskripsi Fitur")
@@ -526,14 +525,14 @@ def page_beranda(df: pd.DataFrame):
             "Keterangan": list(FEATURE_DESC.values()),
         })
         st.dataframe(feat_df, use_container_width=True, hide_index=True, height=420)
- 
+
     # Pie distribusi target
     with col_pie:
         st.subheader("🎯 Distribusi Target")
         target_cnt = df["target"].value_counts().reset_index()
         target_cnt.columns = ["Target", "Count"]
         target_cnt["Label"] = target_cnt["Target"].map({0: "Sehat (0)", 1: "Sakit Jantung (1)"})
- 
+
         fig = px.pie(
             target_cnt, values="Count", names="Label", hole=0.48,
             color_discrete_sequence=["#4fc3f7", "#f06292"],
@@ -541,14 +540,14 @@ def page_beranda(df: pd.DataFrame):
         fig.update_layout(**_base_layout(height=310, margin=dict(l=20, r=20, t=20, b=20)))
         fig.update_traces(textinfo="percent+label", textfont_size=13)
         st.plotly_chart(fig, use_container_width=True)
- 
+
         sehat  = (df["target"] == 0).sum()
         sakit  = df["target"].sum()
         st.info(
             f"⚖️ **Class Balance:**  Sehat = `{sehat}`  |  "
             f"Sakit = `{sakit}`  *(hampir seimbang)*"
         )
- 
+
     # Statistik deskriptif
     st.markdown("---")
     st.subheader("📌 Statistik Deskriptif")
@@ -556,31 +555,31 @@ def page_beranda(df: pd.DataFrame):
     if df_disp["sex"].dtype != object:
         df_disp["sex"] = df_disp["sex"].map({1: "male", 0: "female"})
     st.dataframe(df_disp.describe().round(3), use_container_width=True)
- 
+
     st.subheader("📄 Preview Dataset (10 baris pertama)")
     st.dataframe(df_disp.head(10), use_container_width=True, hide_index=True)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [5.4]  Halaman EDA
 # ─────────────────────────────────────────────────────────────
 def page_eda(df: pd.DataFrame):
     st.title("📊 Exploratory Data Analysis (EDA)")
     st.markdown("---")
- 
+
     # Siapkan df numerik
     df_num = df.copy()
     if df_num["sex"].dtype == object:
         df_num["sex"] = df_num["sex"].map({"male": 1, "female": 0})
     df_num["Status"] = df_num["target"].map({0: "Sehat", 1: "Sakit Jantung"})
- 
+
     tab1, tab2, tab3, tab4 = st.tabs([
         "📉 Distribusi Fitur",
         "🔥 Matriks Korelasi",
         "🎯 Analisis per Status",
         "📦 Boxplot",
     ])
- 
+
     # ── Tab 1: Distribusi ──────────────────────────────────────
     with tab1:
         st.subheader("Distribusi Fitur Numerik Utama")
@@ -588,18 +587,18 @@ def page_eda(df: pd.DataFrame):
         colors_num = ["#4fc3f7", "#81c784", "#ffb74d", "#f06292", "#ce93d8"]
         fig = make_subplots(rows=2, cols=3,
             subplot_titles=[FEATURE_DESC[c].split("(")[0].strip() for c in num_feats])
- 
+
         for idx, (col, clr) in enumerate(zip(num_feats, colors_num)):
             r, c = divmod(idx, 3)
             fig.add_trace(go.Histogram(
                 x=df_num[col], name=col,
                 marker_color=clr, opacity=0.85, nbinsx=22,
             ), row=r + 1, col=c + 1)
- 
+
         fig.update_layout(**_base_layout(height=480, showlegend=False,
                                           title_text="Distribusi Fitur Numerik"))
         st.plotly_chart(fig, use_container_width=True)
- 
+
         st.subheader("Distribusi Fitur Kategorikal")
         cat_feats = ["sex", "cp", "fbs", "restecg", "exang", "slope", "ca", "thal"]
         fig2 = make_subplots(rows=2, cols=4, subplot_titles=cat_feats)
@@ -612,7 +611,7 @@ def page_eda(df: pd.DataFrame):
             ), row=r + 1, col=c + 1)
         fig2.update_layout(**_base_layout(height=420, showlegend=False))
         st.plotly_chart(fig2, use_container_width=True)
- 
+
     # ── Tab 2: Korelasi ────────────────────────────────────────
     with tab2:
         st.subheader("Heatmap Korelasi Pearson")
@@ -628,7 +627,7 @@ def page_eda(df: pd.DataFrame):
         fig.update_layout(**_base_layout(height=570,
                                           margin=dict(l=10, r=10, t=30, b=10)))
         st.plotly_chart(fig, use_container_width=True)
- 
+
         st.subheader("🎯 Korelasi Fitur terhadap Target (diurutkan)")
         target_corr = corr["target"].drop("target").sort_values(ascending=True)
         fig2 = go.Figure(go.Bar(
@@ -640,12 +639,12 @@ def page_eda(df: pd.DataFrame):
                                            xaxis_title="Korelasi",
                                            yaxis={"categoryorder": "total ascending"}))
         st.plotly_chart(fig2, use_container_width=True)
- 
+
     # ── Tab 3: Analisis per Status ─────────────────────────────
     with tab3:
         st.subheader("Distribusi Fitur Berdasarkan Status Penyakit Jantung")
         CMAP = {"Sehat": "#4fc3f7", "Sakit Jantung": "#f06292"}
- 
+
         c1, c2 = st.columns(2)
         with c1:
             fig = px.histogram(df_num, x="age", color="Status",
@@ -661,7 +660,7 @@ def page_eda(df: pd.DataFrame):
                                 title="Detak Jantung Maks per Status")
             fig.update_layout(**_base_layout(height=330, bargap=0.05))
             st.plotly_chart(fig, use_container_width=True)
- 
+
         c1, c2 = st.columns(2)
         with c1:
             sex_grp = df_num.copy()
@@ -679,7 +678,7 @@ def page_eda(df: pd.DataFrame):
                           labels={"cp": "Chest Pain Type"})
             fig.update_layout(**_base_layout(height=330))
             st.plotly_chart(fig, use_container_width=True)
- 
+
         # Scatter: Usia vs Thalach
         st.subheader("Scatter: Usia vs Detak Jantung Maks")
         fig = px.scatter(df_num, x="age", y="thalach",
@@ -688,7 +687,7 @@ def page_eda(df: pd.DataFrame):
                           labels={"age": "Usia", "thalach": "Detak Jantung Maks"})
         fig.update_layout(**_base_layout(height=380))
         st.plotly_chart(fig, use_container_width=True)
- 
+
     # ── Tab 4: Boxplot ─────────────────────────────────────────
     with tab4:
         st.subheader("Boxplot Fitur Numerik per Status")
@@ -703,22 +702,22 @@ def page_eda(df: pd.DataFrame):
                       title=f"Boxplot  {FEATURE_DESC.get(sel, sel)}")
         fig.update_layout(**_base_layout(height=440, showlegend=False))
         st.plotly_chart(fig, use_container_width=True)
- 
+
         # Violin sebagai bonus
         fig2 = px.violin(df_num, x="Status", y=sel, color="Status",
                           color_discrete_map=CMAP, box=True,
                           title=f"Violin Plot  {FEATURE_DESC.get(sel, sel)}")
         fig2.update_layout(**_base_layout(height=400, showlegend=False))
         st.plotly_chart(fig2, use_container_width=True)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [5.5]  Halaman Model ANN
 # ─────────────────────────────────────────────────────────────
 def page_ann(ann_model, ann_history: dict, X_test_sc, y_test, ann_threshold: float):
     st.title("🧠 Model Artificial Neural Network (ANN)")
     st.markdown("---")
- 
+
     # ── Arsitektur ──
     st.subheader("🏗️ Arsitektur Model")
     c1, c2, c3 = st.columns(3)
@@ -726,7 +725,7 @@ def page_ann(ann_model, ann_history: dict, X_test_sc, y_test, ann_threshold: flo
         st.markdown("""
 **Layer Input**
 - 13 neuron (sesuai jumlah fitur)
- 
+
 **Hidden Layer 1**
 - 32 neuron, aktivasi ReLU
 - Dropout 40%
@@ -743,24 +742,24 @@ def page_ann(ann_model, ann_history: dict, X_test_sc, y_test, ann_threshold: flo
         st.markdown("""
 **Layer Output**
 - 1 neuron, aktivasi Sigmoid
- 
+
 **Kompilasi**
 - Optimizer : Adam (lr=0.001)
 - Loss      : Binary Crossentropy
 - Class Weight: Balanced
- 
+
 **Callback**
 - EarlyStopping (patience=30)
 - ReduceLROnPlateau (patience=12)
         """)
- 
+
     st.markdown("---")
- 
+
     # ── Training History ──
     st.subheader("📈 Training History")
     epochs = list(range(1, len(ann_history["loss"]) + 1))
     c1, c2 = st.columns(2)
- 
+
     with c1:
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=epochs, y=ann_history["loss"],
@@ -771,7 +770,7 @@ def page_ann(ann_model, ann_history: dict, X_test_sc, y_test, ann_threshold: flo
                                           xaxis_title="Epoch", yaxis_title="Loss",
                                           height=330, legend=dict(x=0.65, y=0.9)))
         st.plotly_chart(fig, use_container_width=True)
- 
+
     with c2:
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=epochs, y=ann_history["accuracy"],
@@ -782,29 +781,29 @@ def page_ann(ann_model, ann_history: dict, X_test_sc, y_test, ann_threshold: flo
                                           xaxis_title="Epoch", yaxis_title="Accuracy",
                                           height=330, legend=dict(x=0.1, y=0.3)))
         st.plotly_chart(fig, use_container_width=True)
- 
+
     st.caption(f"Model berhenti training pada epoch **{len(epochs)}** (EarlyStopping).")
- 
+
     # ── Evaluasi ──
     st.markdown("---")
     st.subheader("📊 Evaluasi Model ANN (Test Set)")
- 
+
     st.info(
         f"🎯 **Threshold Optimal (Youden's J):** `{ann_threshold:.4f}`  \n"
         "Threshold dihitung dari validation set — bukan 0.5 default — "
         "agar model tidak bias ke satu kelas."
     )
- 
+
     y_prob_ann = ann_model.predict(X_test_sc, verbose=0).flatten()
     y_pred_ann = (y_prob_ann >= ann_threshold).astype(int)
     m_ann, cm_ann, fpr_ann, tpr_ann, auc_ann = evaluate_model(
         y_test, y_pred_ann, y_prob_ann, "ANN"
     )
- 
+
     cols = st.columns(5)
     for col, key in zip(cols, ["Accuracy", "Precision", "Recall", "F1-Score", "AUC-ROC"]):
         col.metric(key, f"{m_ann[key]:.4f}")
- 
+
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1:
@@ -826,14 +825,14 @@ def page_ann(ann_model, ann_history: dict, X_test_sc, y_test, ann_threshold: flo
             height=350, legend=dict(x=0.55, y=0.1)
         ))
         st.plotly_chart(fig, use_container_width=True)
- 
+
     st.subheader("📋 Classification Report")
     rpt = classification_report(y_test, y_pred_ann,
                                   target_names=["Sehat (0)", "Sakit (1)"],
                                   output_dict=True)
     st.dataframe(pd.DataFrame(rpt).T.round(4), use_container_width=True)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [5.6]  Halaman Model SVM
 # ─────────────────────────────────────────────────────────────
@@ -841,7 +840,7 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
               X_test_sc, y_test, svm_threshold: float):
     st.title("⚙️ Model Support Vector Machine (SVM)")
     st.markdown("---")
- 
+
     # ── Konfigurasi ──
     st.subheader("🔧 Hyperparameter Tuning (GridSearchCV)")
     c1, c2, c3 = st.columns(3)
@@ -865,27 +864,27 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
         st.markdown("**✅ Parameter Terbaik yang Dipilih**")
         for k, v in best_params.items():
             st.markdown(f"- **{k}** : `{v}`")
- 
+
     # ── Evaluasi ──
     st.markdown("---")
     st.subheader("📊 Evaluasi Model SVM (Test Set)")
- 
+
     st.info(
         f"🎯 **Threshold Optimal (Youden's J):** `{svm_threshold:.4f}`  \n"
         "Threshold dihitung dari validation set untuk keseimbangan "
         "Sensitivity dan Specificity yang optimal."
     )
- 
+
     y_prob_svm = svm_model.predict_proba(X_test_sc)[:, 1]
     y_pred_svm = (y_prob_svm >= svm_threshold).astype(int)
     m_svm, cm_svm, fpr_svm, tpr_svm, auc_svm = evaluate_model(
         y_test, y_pred_svm, y_prob_svm, "SVM"
     )
- 
+
     cols = st.columns(5)
     for col, key in zip(cols, ["Accuracy", "Precision", "Recall", "F1-Score", "AUC-ROC"]):
         col.metric(key, f"{m_svm[key]:.4f}")
- 
+
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1:
@@ -907,7 +906,7 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
             height=350, legend=dict(x=0.55, y=0.1)
         ))
         st.plotly_chart(fig, use_container_width=True)
- 
+
     # ── Support Vectors ──
     st.markdown("---")
     st.subheader("📌 Informasi Support Vectors")
@@ -919,14 +918,14 @@ def page_svm(svm_model, best_params: dict, cv_score: float,
     c2.metric("SV Kelas 0 (Sehat)",     sv_0)
     c3.metric("SV Kelas 1 (Sakit)",     sv_1)
     c4.metric("Rasio SV / Sampel Train", f"{sv_total/len(y_test)*5:.1%}")
- 
+
     st.subheader("📋 Classification Report")
     rpt = classification_report(y_test, y_pred_svm,
                                   target_names=["Sehat (0)", "Sakit (1)"],
                                   output_dict=True)
     st.dataframe(pd.DataFrame(rpt).T.round(4), use_container_width=True)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [5.7]  Halaman Perbandingan Model
 # ─────────────────────────────────────────────────────────────
@@ -935,36 +934,36 @@ def page_perbandingan(ann_model, svm_model, ann_history: dict,
                        ann_threshold: float, svm_threshold: float):
     st.title("📈 Perbandingan Model: ANN vs SVM")
     st.markdown("---")
- 
+
     # Prediksi dengan threshold optimal masing-masing
     y_prob_ann = ann_model.predict(X_test_sc, verbose=0).flatten()
     y_pred_ann = (y_prob_ann >= ann_threshold).astype(int)
     y_prob_svm = svm_model.predict_proba(X_test_sc)[:, 1]
     y_pred_svm = (y_prob_svm >= svm_threshold).astype(int)
- 
+
     m_ann, cm_ann, fpr_ann, tpr_ann, auc_ann = evaluate_model(
         y_test, y_pred_ann, y_prob_ann, "ANN")
     m_svm, cm_svm, fpr_svm, tpr_svm, auc_svm = evaluate_model(
         y_test, y_pred_svm, y_prob_svm, "SVM")
- 
+
     METRICS = ["Accuracy", "Precision", "Recall", "F1-Score", "AUC-ROC"]
- 
+
     # ── Tabel Perbandingan ──
     st.subheader("📋 Tabel Perbandingan Metrik")
     df_cmp = pd.DataFrame([m_ann, m_svm]).set_index("Model")
- 
+
     def _highlight(s):
         best = s == s.max()
         return [
             "background-color:#1b5e20; color:#a5d6a7; font-weight:bold" if v else ""
             for v in best
         ]
- 
+
     st.dataframe(df_cmp.style.apply(_highlight), use_container_width=True)
- 
+
     st.markdown("---")
     c1, c2 = st.columns(2)
- 
+
     # ── ROC Curve ──
     with c1:
         st.subheader("📉 ROC Curve Perbandingan")
@@ -973,7 +972,7 @@ def page_perbandingan(ann_model, svm_model, ann_history: dict,
                                 fpr_svm, tpr_svm, auc_svm),
             use_container_width=True
         )
- 
+
     # ── Bar Chart Metrik ──
     with c2:
         st.subheader("📊 Bar Chart Metrik")
@@ -998,7 +997,7 @@ def page_perbandingan(ann_model, svm_model, ann_history: dict,
             legend=dict(x=0.8, y=0.98),
         ))
         st.plotly_chart(fig, use_container_width=True)
- 
+
     # ── Radar Chart ──
     st.subheader("🕸️ Radar Chart — Profil Model")
     fig = go.Figure()
@@ -1024,14 +1023,14 @@ def page_perbandingan(ann_model, svm_model, ann_history: dict,
         height=480, legend=dict(x=1.02, y=0.9),
     )
     st.plotly_chart(fig, use_container_width=True)
- 
+
     # ── Kesimpulan ──
     st.markdown("---")
     st.subheader("💡 Kesimpulan Komparatif")
- 
+
     def _winner(a, b, label_a="ANN", label_b="SVM"):
         return f"**{label_a}**" if a > b else f"**{label_b}**"
- 
+
     md_rows = "\n".join([
         f"| {m} | {m_ann[m]:.4f} | {m_svm[m]:.4f} | {_winner(m_ann[m], m_svm[m])} |"
         for m in METRICS
@@ -1048,8 +1047,8 @@ def page_perbandingan(ann_model, svm_model, ann_history: dict,
         "karena false negative (sakit tapi diprediksi sehat) lebih berisiko "
         "dibanding false positive."
     )
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # [5.8]  Halaman Prediksi Pasien
 # ─────────────────────────────────────────────────────────────
@@ -1061,9 +1060,9 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
         "dari kedua model secara bersamaan."
     )
     st.markdown("---")
- 
+
     c1, c2, c3 = st.columns(3)
- 
+
     with c1:
         st.subheader("👤 Data Demografi")
         age  = st.slider("Usia (tahun)", 20, 80, 50)
@@ -1080,7 +1079,7 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
         )
         fbs  = st.selectbox("Gula Darah Puasa > 120 mg/dl", [0, 1],
                              format_func=lambda x: f"{x} — {'Ya' if x else 'Tidak'}")
- 
+
     with c2:
         st.subheader("🩺 Pemeriksaan Klinis")
         trestbps = st.slider("Tekanan Darah Istirahat (mm Hg)", 80, 200, 120)
@@ -1095,7 +1094,7 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
             }[x]
         )
         thalach  = st.slider("Detak Jantung Maks", 60, 220, 150)
- 
+
     with c3:
         st.subheader("🏃 Data Uji Olahraga")
         exang   = st.selectbox("Angina akibat Olahraga", [0, 1],
@@ -1112,30 +1111,30 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
             options=[0, 1, 2],
             format_func=lambda x: {0: "0 — Normal", 1: "1 — Fixed Defect", 2: "2 — Reversible Defect"}[x]
         )
- 
+
     st.markdown("---")
- 
+
     if st.button("🔍 Prediksi Sekarang", use_container_width=True):
         sex_val    = 1 if sex == "Male" else 0
         input_arr  = np.array([[age, sex_val, cp, trestbps, chol, fbs,
                                  restecg, thalach, exang, oldpeak, slope, ca, thal]])
         input_sc   = scaler.transform(input_arr)
- 
-        # Prediksi ANN
+
+        # Prediksi ANN — pakai threshold optimal (bukan 0.5)
         prob_ann = float(ann_model.predict(input_sc, verbose=0)[0][0])
-        pred_ann = int(prob_ann >= 0.5)
- 
-        # Prediksi SVM
+        pred_ann = int(prob_ann >= ann_threshold)
+
+        # Prediksi SVM — pakai threshold optimal (bukan 0.5)
         prob_svm = float(svm_model.predict_proba(input_sc)[0][1])
-        pred_svm = int(svm_model.predict(input_sc)[0])
- 
+        pred_svm = int(prob_svm >= svm_threshold)
+
         st.markdown("---")
         st.subheader("📊 Hasil Prediksi")
         c1, c2 = st.columns(2)
- 
-        for col, prob, pred, label in [
-            (c1, prob_ann, pred_ann, "🧠 ANN"),
-            (c2, prob_svm, pred_svm, "⚙️ SVM"),
+
+        for col, prob, pred, label, thr in [
+            (c1, prob_ann, pred_ann, "🧠 ANN", ann_threshold),
+            (c2, prob_svm, pred_svm, "⚙️ SVM", svm_threshold),
         ]:
             with col:
                 st.markdown(f"### {label}")
@@ -1148,52 +1147,57 @@ def page_prediksi(ann_model, svm_model, scaler: StandardScaler,
                         Probabilitas Sakit Jantung:<br>
                         <strong style="color:{color}; font-size:1.8em;">{prob:.1%}</strong>
                     </p>
+                    <p style="color:#777; font-size:12px; margin-top:8px;">
+                        Threshold Optimal: {thr:.4f}
+                    </p>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown("**Tingkat Risiko:**")
                 st.progress(float(prob))
- 
+
         # Ringkasan
         st.markdown("---")
         st.subheader("📌 Ringkasan")
         avg_prob = (prob_ann + prob_svm) / 2
         c1, c2, c3 = st.columns(3)
-        c1.metric("Prob. ANN",           f"{prob_ann:.1%}")
-        c2.metric("Prob. SVM",           f"{prob_svm:.1%}")
+        c1.metric("Prob. ANN",              f"{prob_ann:.1%}",
+                   delta=f"thr={ann_threshold:.2f}")
+        c2.metric("Prob. SVM",              f"{prob_svm:.1%}",
+                   delta=f"thr={svm_threshold:.2f}")
         c3.metric("Rata-rata Probabilitas", f"{avg_prob:.1%}")
- 
+
         agree = pred_ann == pred_svm
         if agree:
             st.success("✅ Kedua model **sepakat** dalam diagnosis pasien ini.")
         else:
             st.warning("⚠️ Kedua model **tidak sepakat** — pertimbangkan pengujian lebih lanjut.")
- 
+
         if avg_prob > 0.65:
             st.error("🚨 Risiko **tinggi** — pasien sangat disarankan melakukan pemeriksaan ke dokter spesialis jantung.")
         elif avg_prob > 0.4:
             st.warning("⚠️ Risiko **sedang** — pantau kondisi dan konsultasikan ke dokter.")
         else:
             st.success("✅ Risiko **rendah** — tetap jaga pola hidup sehat.")
- 
+
         st.caption(
             "⚠️ *Disclaimer: Prediksi ini hanya untuk keperluan akademis dan "
             "tidak menggantikan diagnosis medis dari tenaga kesehatan profesional.*"
         )
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════════
 # [6]  MAIN FUNCTION
 # ══════════════════════════════════════════════════════════════════
- 
+
 def main():
     menu = render_sidebar()
- 
+
     # ── Load dataset ──
     df = load_data()
     if df is None:
         st.error("""
         ❌ **File dataset tidak ditemukan!**
- 
+
         Upload `heart__1_.xlsx` ke Google Colab terlebih dahulu:
         ```python
         from google.colab import files
@@ -1202,12 +1206,12 @@ def main():
         Kemudian refresh halaman ini.
         """)
         st.stop()
- 
+
     # ── Preprocessing ──
     (X_train, X_val, X_test,
      y_train, y_val, y_test,
      X_train_sc, X_val_sc, X_test_sc, scaler) = preprocess(df)
- 
+
     # ── Training model (caching via session_state) ──
     if "models_ready" not in st.session_state:
         with st.spinner("⏳ Melatih Model ANN & SVM… harap tunggu sebentar…"):
@@ -1216,38 +1220,49 @@ def main():
                                                 X_val_sc, y_val)
             # SVM
             svm_model, best_params, cv_score = train_svm(X_train_sc, y_train)
- 
-        st.session_state.ann_model   = ann_model
-        st.session_state.ann_history = ann_history
-        st.session_state.svm_model   = svm_model
-        st.session_state.best_params = best_params
-        st.session_state.cv_score    = cv_score
-        st.session_state.models_ready = True
- 
+
+            # ── Hitung threshold optimal dari VALIDATION set ──────────
+            # ANN threshold
+            y_prob_ann_val = ann_model.predict(X_val_sc, verbose=0).flatten()
+            ann_threshold  = find_optimal_threshold(y_val, y_prob_ann_val)
+
+            # SVM threshold
+            y_prob_svm_val = svm_model.predict_proba(X_val_sc)[:, 1]
+            svm_threshold  = find_optimal_threshold(y_val, y_prob_svm_val)
+
+        st.session_state.ann_model     = ann_model
+        st.session_state.ann_history   = ann_history
+        st.session_state.svm_model     = svm_model
+        st.session_state.best_params   = best_params
+        st.session_state.cv_score      = cv_score
+        st.session_state.ann_threshold = ann_threshold
+        st.session_state.svm_threshold = svm_threshold
+        st.session_state.models_ready  = True
+
     # Ambil model dari session_state
-    ann_model   = st.session_state.ann_model
-    ann_history = st.session_state.ann_history
-    svm_model   = st.session_state.svm_model
-    best_params = st.session_state.best_params
-    cv_score    = st.session_state.cv_score
- 
+    ann_model     = st.session_state.ann_model
+    ann_history   = st.session_state.ann_history
+    svm_model     = st.session_state.svm_model
+    best_params   = st.session_state.best_params
+    cv_score      = st.session_state.cv_score
+    ann_threshold = st.session_state.ann_threshold
+    svm_threshold = st.session_state.svm_threshold
+
     # ── Routing halaman ──
     if   menu == "🏠  Beranda":
         page_beranda(df)
     elif menu == "📊  EDA":
         page_eda(df)
     elif menu == "🧠  Model ANN":
-        page_ann(ann_model, ann_history, X_test_sc, y_test)
+        page_ann(ann_model, ann_history, X_test_sc, y_test, ann_threshold)
     elif menu == "⚙️  Model SVM":
-        page_svm(svm_model, best_params, cv_score, X_test_sc, y_test)
+        page_svm(svm_model, best_params, cv_score, X_test_sc, y_test, svm_threshold)
     elif menu == "📈  Perbandingan Model":
-        page_perbandingan(ann_model, svm_model, ann_history, X_test_sc, y_test)
+        page_perbandingan(ann_model, svm_model, ann_history,
+                           X_test_sc, y_test, ann_threshold, svm_threshold)
     elif menu == "🔮  Prediksi Pasien":
-        page_prediksi(ann_model, svm_model, scaler)
- 
- 
+        page_prediksi(ann_model, svm_model, scaler, ann_threshold, svm_threshold)
+
+
 if __name__ == "__main__":
     main()
- 
-
-
