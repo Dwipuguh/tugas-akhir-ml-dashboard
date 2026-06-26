@@ -167,7 +167,7 @@ def load_data() -> pd.DataFrame | None:
     """Cari dan baca file dataset xlsx dari beberapa lokasi umum di Colab."""
     candidates = [
         "heart__1_.xlsx",
-        "heart.xlsx",
+        "heart (1).xlsx",
         "/content/heart__1_.xlsx",
         "/content/heart.xlsx",
         "/content/drive/MyDrive/heart__1_.xlsx",
@@ -468,7 +468,7 @@ def render_sidebar() -> str:
         <span style="font-size:3em;">❤️</span>
         <h2 style="color:#4fc3f7; margin:6px 0 2px;">Heart Disease</h2>
         <p style="color:#7a9cc0; font-size:12px; margin:0;">
-            ANN &amp; SVM · ITS Statistika Bisnis
+            ANN &amp; SVM · Statistika Bisnis FV-ITS 
         </p>
     </div>
     <hr>
